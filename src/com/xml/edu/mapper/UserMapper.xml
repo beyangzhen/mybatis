@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- sql的配置文件 -->
+
+<mapper namespace="com.xml.mapper.UserMapper">
+
+	<!--
+		开启 二级缓存：
+			eviction="FIFO" 回收策略的设置,FIFO先进先出
+			flushInterval="60000" 自动刷新缓存的时间设置
+			size="512" 最多缓存512个对象
+			readOnly="true" 设置可读的缓存
+	-->
+	<cache eviction="FIFO" flushInterval="60000" size="512" readOnly="true" />
+	
+	
+	<!-- #{} 1. 解析的是占位符（？），传入数据当成一个字符串
+			 2. 可以防止SQL注入
+			 3. 若为空，不会报错 
+			 
+	     ${} 1. 传入数据直接生成在sql中
+	     	 2. 不能防止sql注入
+	     	 3. 若为空，会报错
+	     	 
+	     -> MyBatis排序时，使用order by动态参数，用$而不是#
+    -->
+	
+	<!-- 增 -->
+	<insert id="saveUser"  parameterType="User">
+		insert into users(name, age) values(#{name}, #{age})
+	</insert>
+	
+	<!-- 删 -->
+	<delete id="deleteUserById" parameterType="int">
+		delete from users where id =#{id}
+	</delete>
+	
+	<!-- 改 -->
+	<update id="updateUser" parameterType="User">
+		update users set name=#{name}, age=#{age} where id=#{id}
+	</update>
+	
+	<!-- 查 -->
+	<select id="selectAllUser" resultMap="myRestultMap"><!-- resultType放在resultMap标签中写了 -->
+		 select * from users 
+	</select>
+	<!-- 表字段和类属性不一样时，可以指定匹配关系 -->
+	<resultMap type="User" id="myRestultMap">
+		<id column="id" property="id"/>
+		<result column="name" property="name"/>
+		<result column="age" property="age"/>
+	</resultMap>
+	
+	<!-- mybatis-config.xml 中未配置<typeAliases>时
+	<select id="selectUserById" parameterType="int" resultType="User">
+		 select * from users where id = #{ id }
+	</select> 
+	-->	
+	<!-- 根据ID查询一个用户的信息 -->
+	<select id="selectUserById" parameterType="int" resultType="User">
+		 select * from users where id = #{ id }
+	</select>
+	
+	
+	<!-- 多条件查询 -->
+	<select id="findUserByCondition" resultType="User" parameterType="UserCondition">
+		select * from users where name like #{name} and age between #{minAge} and #{maxAge}
+	</select>
+	
+	<select id="findUserByCondition2" resultType="User"><!-- 此种方式，参数可以是map -->
+		select * from users where name like #{name} and age between #{minAge} and #{maxAge}
+	</select>
+	
+	<select id="findUserByCondition3" resultType="User">
+		select * from users
+		<where>
+			<if test="name!=null">
+				name like #{name}
+			</if>
+			<if test="minAge>0 and maxAge >0 ">
+				and age between ${minAge} and ${maxAge} 
+			</if>
+			<!-- 或
+			<if test="minAge>0">
+				<![CDATA[and age>= #{minAge}]]>
+			</if>
+			<if test="maxAge>0">
+				<![CDATA[and age<= #{maxAge}]]>
+			</if>
+			-->
+		</where>
+	</select>
+	
+	
+								<!-- 动态sql -->
+	<!-- include标签 -->
+	<sql id="mycolumn">name,age</sql>
+	<select id="findUserById3" resultType="User" parameterType="int">
+			select
+			<!-- 返回的结果集为sql标签中设置的 -->
+			<include refid="mycolumn"/>
+			from users
+			where id =#{id}
+	</select>
+	
+	<!-- set标签 -->
+	<update id="updateUser" parameterType="User">
+		update users 
+		<!-- 在更新语句时，如果属性为空，可以选择性的去更新 -->
+		<set >
+			<if test="name!=null">
+				 name =#{name}
+			</if>
+			<if test="age>0">
+				 ,age =#{age}
+			</if>
+		</set>
+		where id =#{id}
+	</update>
+	
+	<!-- foreach标签，list集合 -->
+	<select id="findUserByIds" resultType="User">
+			select * from users  where id in 
+			<foreach collection="list" index="index" item="ids" open="(" close=")" separator=",">
+				  #{ids}
+			</foreach>
+	</select>
+	
+	<!-- foreach标签，array数组 -->
+	<select id="findUserByIds2" resultType="User">
+			select * from users  where id in 
+			<foreach collection="array" index="index" item="ids" open="(" close=")" separator=",">
+				  #{ids}
+			</foreach>
+	</select>
+	
+	
+	<!-- 调用存储过程（ getUserAgeByName） -->
+	<select id="getUserAgeByName"  parameterMap="myMap" statementType="CALLABLE">
+		 call mybatis.getUserAgeByName(?,?)
+	</select>
+	<parameterMap type="java.util.Map" id="myMap">
+		 <parameter property="userName" jdbcType="VARCHAR" mode="IN"/>
+		 <parameter property="userAge" jdbcType="INTEGER" mode="OUT"/>
+	</parameterMap>
+	
+	
+												
+								<!-- 一对一 -->
+	<!-- 关联查询 -->
+	<select id="findDepartmentById" parameterType="int" resultMap="departResultMap">
+		SELECT
+			d.id,
+			d.departName,
+			m.id as manager_id,
+			m.managerName,
+			m.major
+		from department d, manager m
+		where m.id = d.manager_id 
+		and d.id = #{id}
+	</select>
+	<resultMap type="Department" id="departResultMap">
+		<id property="id" column="id"/>
+		<result property="departName" column="departName"/>
+		<association property="manger" javaType="Manager">
+			<!-- 配置的就是关联对象的属性和表的映射  -->
+			<id property="id" column="manager_id"/>
+			<result property="managerName" column="managerName"/>
+			<result property="major" column="major"/>
+		</association>
+	</resultMap>
+	
+	<!-- 嵌套查询 -->
+	<select id="findDepartmentById2" resultMap="departResultMap2">
+		 select * from department where id=#{id}
+	</select>
+	<select id="findMangerById" resultType="Manager">
+		select * from manager where id=#{id}
+	</select>	
+	<resultMap type="Department" id="departResultMap2">
+		<id property="id" column="id"/>
+		<result property="departName" column="departName"/>
+		<!-- select：子查询的方法名 -->
+		<association property="manger" column="manager_id" select="findMangerById"></association>
+	</resultMap>
+	
+	<!-- 增 -->
+	<!-- 设置 keyProperty="id"和useGeneratedKeys="true"，会在存储后 "返回id" -->
+	<insert id="saveManager" parameterType="Manager" keyProperty="id" useGeneratedKeys="true">
+		insert into manager(managerName, major) values(#{managerName}, #{major})
+	</insert>
+	
+	
+								<!-- 一对多 -->
+	<!-- 关联查询 -->
+	<select id="findClassById" resultMap="classResultMap" >
+		SELECT 
+			c.id,
+			c.class_name,
+			s.id  as sid,
+			s.name
+		from classes c, student s
+		where c.id= s.class_id 
+		and c.id= #{id}
+	</select>	
+	<resultMap type="Classes" id="classResultMap">
+		<id property="id" column="id"/>
+		<result property="class_name" column="class_name"/>
+		<!-- 关联对象的配置 -->
+		<collection property="studentList" ofType="Student">
+			<id property="id" column="sid"/>
+			<result property="name" column="name"/>
+		</collection>		
+	</resultMap>
+		
+	<!-- 嵌套查询 -->
+	<select id="selectClassById" resultMap="classResultMap2">
+		 select * from classes where id=#{id}
+	</select>	
+	<select id="selectStudentById" resultType="Student">
+		select * from student
+	</select>	
+	<resultMap type="Classes" id="classResultMap2">
+		<id property="id" column="id"/>
+		<result property="class_name" column="class_name"/>	
+		<collection property="studentList" ofType="Student" column="id" select="selectStudentById"></collection>
+	</resultMap>
+	
+</mapper>

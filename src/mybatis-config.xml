@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+	<properties resource="db.properties"></properties>
+	
+	<!-- 只需配置为User。若未配置，则userMapper.xml中需要写entity类的全类名 -->
+	<typeAliases>
+		<!-- <typeAlias type="com.xml.edu.entity.User" alias="User"/> -->
+		<package name="com.xml.edu.entity"/> 
+	</typeAliases>
+	
+	
+	<!-- 环境的配置 -->
+	<!-- default 在其子标签中id中取值，选定一个位默认环境 -->
+	<environments default="development">
+		<!--  开发的环境 -->
+		<environment id="development">
+			<!-- 事务管理使用的数据库连接方式 -->
+			<transactionManager type="JDBC"/>
+			<!-- 配置数据源 -->
+			<dataSource type="POOLED">
+				<property name="driver" value="${driver}"/>
+				<property name="url" value="${url}"/>
+				<property name="username" value="${username}"/>
+				<property name="password" value="${password}"/>
+			</dataSource>
+		</environment>
+		<!-- 
+		<environment id="test">	</environment>
+		<environment id="run"></environment>
+		 -->
+	</environments>
+	
+	<!-- 配置资源文件 -->
+	<mappers>
+		<mapper resource="com/xml/edu/mapper/UserMapper.xml"/>
+		
+		<mapper class="com.anotation.edu.mapper.UserMapper"/>
+	</mappers>
+	
+</configuration>
