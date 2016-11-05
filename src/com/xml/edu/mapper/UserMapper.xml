@@ -31,6 +31,14 @@
 		insert into users(name, age) values(#{name}, #{age})
 	</insert>
 	
+	<!--  批量添加  -->
+	<insert id="addSubjectContextList" parameterType="SubjectContext">
+		INSERT into tb_subjectcontext(sequence,contexts,isRigth,subject_id) VALUES
+		<foreach collection="list" index="index" item="subjectContext" separator=",">
+			(#{subjectContext.sequence},#{subjectContext.contexts},#{subjectContext.isRigth},#{subjectContext.subject.id})
+		</foreach>
+	</insert>
+	
 	<!-- 删 -->
 	<delete id="deleteUserById" parameterType="int">
 		delete from users where id =#{id}
